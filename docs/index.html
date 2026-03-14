@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>US Weather Tracker</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <h1>US Weather Tracker</h1>
+      <p class="sub">Live website version (GitHub Pages)</p>
+
+      <section class="card">
+        <label for="apiKey">OpenWeather API Key (saved in your browser)</label>
+        <input id="apiKey" type="password" placeholder="Enter API key" />
+
+        <label for="stateInput">US State (name or abbreviation)</label>
+        <input id="stateInput" type="text" placeholder="e.g., New York or NY" />
+
+        <div class="actions">
+          <button id="saveKeyBtn">Save Key</button>
+          <button id="weatherBtn">Get Weather</button>
+          <button id="autoBtn">Auto Detect</button>
+          <button id="themeBtn">Toggle Theme</button>
+        </div>
+
+        <p id="status">Ready.</p>
+      </section>
+
+      <section class="card output">
+        <img id="icon" alt="weather icon" />
+        <p id="temp">Temperature: --</p>
+        <p id="feels">Feels Like: --</p>
+        <p id="cond">Condition: --</p>
+        <p id="hum">Humidity: --</p>
+        <p id="wind">Wind: --</p>
+      </section>
+
+      <section class="card output">
+        <h2>5-Day Forecast</h2>
+        <ul id="forecast"></ul>
+      </section>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
