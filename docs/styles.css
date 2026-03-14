@@ -52,5 +52,5 @@ button {
 }
 #status { color: var(--muted); }
 .output p { margin: 6px 0; }
-#icon { width: 80px; height: 80px; display:block; }
+#iconText { font-size: 56px; margin: 6px 0; }
 #forecast { margin: 0; padding-left: 18px; }

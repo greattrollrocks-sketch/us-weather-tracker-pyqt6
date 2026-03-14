@@ -9,17 +9,13 @@
   <body>
     <main class="app">
       <h1>US Weather Tracker</h1>
-      <p class="sub">Live website version (GitHub Pages)</p>
+      <p class="sub">Live website version (GitHub Pages, no API key required)</p>
 
       <section class="card">
-        <label for="apiKey">OpenWeather API Key (saved in your browser)</label>
-        <input id="apiKey" type="password" placeholder="Enter API key" />
-
         <label for="stateInput">US State (name or abbreviation)</label>
         <input id="stateInput" type="text" placeholder="e.g., New York or NY" />
 
         <div class="actions">
-          <button id="saveKeyBtn">Save Key</button>
           <button id="weatherBtn">Get Weather</button>
           <button id="autoBtn">Auto Detect</button>
           <button id="themeBtn">Toggle Theme</button>
@@ -29,7 +25,7 @@
       </section>
 
       <section class="card output">
-        <img id="icon" alt="weather icon" />
+        <p id="iconText">☀️</p>
         <p id="temp">Temperature: --</p>
         <p id="feels">Feels Like: --</p>
         <p id="cond">Condition: --</p>

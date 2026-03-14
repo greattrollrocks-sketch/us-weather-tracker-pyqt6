@@ -4,17 +4,10 @@ const STATE_COORDS = {
 const ABBR = {al:'alabama',ak:'alaska',az:'arizona',ar:'arkansas',ca:'california',co:'colorado',ct:'connecticut',de:'delaware',fl:'florida',ga:'georgia',hi:'hawaii',id:'idaho',il:'illinois',in:'indiana',ia:'iowa',ks:'kansas',ky:'kentucky',la:'louisiana',me:'maine',md:'maryland',ma:'massachusetts',mi:'michigan',mn:'minnesota',ms:'mississippi',mo:'missouri',mt:'montana',ne:'nebraska',nv:'nevada',nh:'new hampshire',nj:'new jersey',nm:'new mexico',ny:'new york',nc:'north carolina',nd:'north dakota',oh:'ohio',ok:'oklahoma',or:'oregon',pa:'pennsylvania',ri:'rhode island',sc:'south carolina',sd:'south dakota',tn:'tennessee',tx:'texas',ut:'utah',vt:'vermont',va:'virginia',wa:'washington',wv:'west virginia',wi:'wisconsin',wy:'wyoming'};
 
 const $ = (id) => document.getElementById(id);
-const apiInput = $('apiKey');
 const stateInput = $('stateInput');
 const statusEl = $('status');
-const iconEl = $('icon');
 const forecastEl = $('forecast');
 
-apiInput.value = localStorage.getItem('owm_key') || '';
-$('saveKeyBtn').onclick = () => {
-  localStorage.setItem('owm_key', apiInput.value.trim());
-  statusEl.textContent = 'API key saved in this browser.';
-};
 $('themeBtn').onclick = () => document.documentElement.classList.toggle('light');
 $('weatherBtn').onclick = () => fetchByState();
 $('autoBtn').onclick = () => fetchAuto();
@@ -23,61 +16,70 @@ function normalizeState(v) {
   v = v.trim().toLowerCase();
   return STATE_COORDS[v] ? v : (ABBR[v] || null);
 }
-function key() {
-  const k = apiInput.value.trim();
-  if (!k) throw new Error('Enter API key first.');
-  return k;
+
+function weatherInfo(code) {
+  const map = {
+    0:['☀️','Clear sky'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],
+    45:['🌫️','Fog'],48:['🌫️','Rime fog'],
+    51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],
+    61:['🌦️','Slight rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],
+    71:['🌨️','Slight snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],
+    80:['🌦️','Rain showers'],81:['🌧️','Rain showers'],82:['⛈️','Violent showers'],
+    95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm w/ hail'],99:['⛈️','Strong thunderstorm w/ hail']
+  };
+  return map[code] || ['🌡️','Unknown'];
 }
+
 function setCurrent(cur) {
-  $('temp').textContent = `Temperature: ${cur.main.temp.toFixed(1)} °F`;
-  $('feels').textContent = `Feels Like: ${cur.main.feels_like.toFixed(1)} °F`;
-  $('cond').textContent = `Condition: ${cur.weather[0].description}`;
-  $('hum').textContent = `Humidity: ${cur.main.humidity}%`;
-  $('wind').textContent = `Wind: ${cur.wind.speed} mph`;
-  iconEl.src = `https://openweathermap.org/img/wn/${cur.weather[0].icon}@2x.png`;
+  const [emoji, desc] = weatherInfo(cur.weather_code);
+  $('iconText').textContent = emoji;
+  $('cond').textContent = `Condition: ${desc}`;
+  $('temp').textContent = `Temperature: ${cur.temperature_2m.toFixed(1)} °F`;
+  $('feels').textContent = `Feels Like: ${cur.apparent_temperature.toFixed(1)} °F`;
+  $('hum').textContent = `Humidity: ${cur.relative_humidity_2m}%`;
+  $('wind').textContent = `Wind: ${cur.wind_speed_10m.toFixed(1)} mph`;
 }
-function setForecast(fc) {
+
+function setForecast(daily) {
   forecastEl.innerHTML = '';
-  const byDay = {};
-  for (const item of fc.list) {
-    const d = new Date(item.dt * 1000);
-    const day = d.toISOString().slice(0,10);
-    (byDay[day] ||= []).push(item);
-  }
-  Object.keys(byDay).slice(0,5).forEach(day => {
-    const slots = byDay[day];
-    const best = slots.reduce((a,b) => Math.abs(new Date(a.dt*1000).getHours()-12) < Math.abs(new Date(b.dt*1000).getHours()-12) ? a : b);
-    const d = new Date(best.dt * 1000).toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+  for (let i = 0; i < Math.min(5, daily.time.length); i++) {
+    const [emoji, desc] = weatherInfo(daily.weather_code[i]);
+    const d = new Date(daily.time[i] + 'T12:00:00').toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+    const hi = Math.round(daily.temperature_2m_max[i]);
+    const lo = Math.round(daily.temperature_2m_min[i]);
     const li = document.createElement('li');
-    li.textContent = `${d}: ${Math.round(best.main.temp)}°F, ${best.weather[0].description}`;
+    li.textContent = `${d}: ${emoji} ${desc}, High ${hi}°F / Low ${lo}°F`;
     forecastEl.appendChild(li);
-  });
+  }
 }
+
 async function fetchAndRender(lat, lon, label) {
   try {
     statusEl.textContent = `Loading ${label}...`;
-    const k = key();
-    const q = `lat=${lat}&lon=${lon}&units=imperial&appid=${k}`;
-    const [curR, fcR] = await Promise.all([
-      fetch(`https://api.openweathermap.org/data/2.5/weather?${q}`),
-      fetch(`https://api.openweathermap.org/data/2.5/forecast?${q}`)
-    ]);
-    if (!curR.ok || !fcR.ok) throw new Error('API request failed. Check key or try again.');
-    const cur = await curR.json();
-    const fc = await fcR.json();
-    setCurrent(cur);
-    setForecast(fc);
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&temperature_unit=fahrenheit&wind_speed_unit=mph&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Weather request failed');
+    const data = await res.json();
+
+    setCurrent(data.current);
+    setForecast(data.daily);
     statusEl.textContent = `Showing weather for ${label}`;
   } catch (e) {
     statusEl.textContent = `Error: ${e.message}`;
   }
 }
+
+function pretty(name) {
+  return name.replace(/\b\w/g, c => c.toUpperCase());
+}
+
 function fetchByState() {
   const s = normalizeState(stateInput.value);
   if (!s) return statusEl.textContent = 'Enter a valid US state.';
   const [lat, lon] = STATE_COORDS[s];
-  fetchAndRender(lat, lon, s.replace(/\b\w/g, c => c.toUpperCase()));
+  fetchAndRender(lat, lon, pretty(s));
 }
+
 async function fetchAuto() {
   try {
     statusEl.textContent = 'Detecting location...';
@@ -86,7 +88,7 @@ async function fetchAuto() {
       const s = normalizeState(geo.region);
       if (s) {
         const [lat, lon] = STATE_COORDS[s];
-        return fetchAndRender(lat, lon, `${s} (Auto)`);
+        return fetchAndRender(lat, lon, `${pretty(s)} (Auto)`);
       }
     }
     if (!geo.latitude || !geo.longitude) throw new Error('Could not detect location.');
